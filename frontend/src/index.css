@@ -1,0 +1,27 @@
+/* Minimal global resets only - NO Tailwind */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  background-color: #121212; /* Dark theme for the area outside the app on desktop */
+}
+
+body {
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f5f5f5; /* Default app background */
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  box-shadow: 0 0 30px rgba(0,0,0,0.5); /* Shadow to separate app from desktop bg */
+  position: relative;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { text-decoration: none; color: inherit; }
+button { cursor: pointer; font-family: inherit; }
+input { font-family: inherit; }

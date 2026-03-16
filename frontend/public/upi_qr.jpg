@@ -1,0 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Error><Code>NoSuchBucket</Code><Message>The specified bucket does not exist</Message><BucketName>cdn.hackr.io</BucketName><RequestId>S830Q3AZ50NT8AN4</RequestId><HostId>OhHmJXVAO2xwKxoCMYJ98xagu5se7hJ22B2nn3ot4zbz7CyBpt7KktlIGd9jd5HK1m0ntnbifQE=</HostId></Error>

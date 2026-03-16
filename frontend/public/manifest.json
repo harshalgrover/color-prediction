@@ -1,0 +1,21 @@
+{
+  "name": "color69",
+  "short_name": "color69",
+  "description": "India's #1 Color Prediction Game",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f85c5c",
+  "theme_color": "#f85c5c",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

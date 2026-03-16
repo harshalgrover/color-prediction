@@ -1,9 +1,7 @@
 // Centralized API configuration
-// For APK/mobile: uses the local network IP so the phone can reach the backend
-// For localhost dev: also works since 10.7.25.60 resolves to this machine
+// Use environment variables or fallback to local IP for development
+const API_HOST = import.meta.env.VITE_API_HOST || '10.7.25.60';
+const API_PORT = import.meta.env.VITE_API_PORT || '5005';
 
-const API_HOST = '10.7.25.60';
-const API_PORT = 5005;
-
-export const API_BASE_URL = `http://${API_HOST}:${API_PORT}`;
-export const SOCKET_URL = `http://${API_HOST}:${API_PORT}`;
+export const API_BASE_URL = import.meta.env.VITE_API_URL || `http://${API_HOST}:${API_PORT}`;
+export const SOCKET_URL = import.meta.env.VITE_API_URL || `http://${API_HOST}:${API_PORT}`;

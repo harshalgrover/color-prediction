@@ -6,14 +6,16 @@ let db: admin.firestore.Firestore;
 try {
   let serviceAccount: any;
   
-  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    console.log('FIREBASE_SERVICE_ACCOUNT env var found, length:', process.env.FIREBASE_SERVICE_ACCOUNT.length);
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
+    const decoded = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf-8');
+    serviceAccount = JSON.parse(decoded);
+    console.log('Firebase initializing from base64 env var, project:', serviceAccount.project_id);
+  } else if (process.env.FIREBASE_SERVICE_ACCOUNT) {
     serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    // Fix escaped newlines in private_key (common env var issue)
     if (serviceAccount.private_key) {
       serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
     }
-    console.log('Firebase initializing from environment variable, project:', serviceAccount.project_id);
+    console.log('Firebase initializing from JSON env var, project:', serviceAccount.project_id);
   } else {
     const serviceAccountPath = path.resolve(__dirname, '../../serviceAccountKey.json');
     serviceAccount = require(serviceAccountPath);
@@ -26,7 +28,7 @@ try {
   });
   
   db = admin.firestore();
-  console.log('Firebase Admin SDK initialized with project ID:', serviceAccount.project_id);
+  console.log('Firebase Admin SDK initialized successfully');
 } catch (error) {
   console.error('Firebase initialization error:', error);
   process.exit(1);

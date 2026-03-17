@@ -21,6 +21,8 @@ export default function Dashboard() {
 
   const [tick, setTick] = useState<Tick | null>(null);
   const [history, setHistory] = useState<HRow[]>([]);
+  const allTicksRef = useRef<Record<string, Tick>>({});
+  const allHistoryRef = useRef<Record<string, HRow[]>>({});
   const [locked, setLocked] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const lockedRef = useRef(false);
@@ -93,6 +95,7 @@ export default function Dashboard() {
 
     for (const m of MODES) {
       tickHandlers[m] = (s: Tick) => {
+        allTicksRef.current[m] = s;
         if (gameModeRef.current !== m) return;
         setTick(s);
         if (s.remainingSeconds <= 5 && s.remainingSeconds > 0) playTickSound();
@@ -103,13 +106,15 @@ export default function Dashboard() {
       };
 
       histHandlers[m] = (d: any[]) => {
-        if (gameModeRef.current !== m) return;
         if (!Array.isArray(d)) return;
-        setHistory(d.map(h => ({
+        const mapped = d.map(h => ({
           period: String(h.period || ''), number: Number(h.number) || 0,
           color: String(h.color || 'red'), size: String(h.size || 'small').toLowerCase(),
           violet: Boolean(h.violet)
-        })));
+        })).slice(0, 10);
+        allHistoryRef.current[m] = mapped;
+        if (gameModeRef.current !== m) return;
+        setHistory(mapped);
       };
 
       resultHandlers[m] = (d: any) => {
@@ -120,7 +125,8 @@ export default function Dashboard() {
           color: String(d.winner || 'red'), size: String(d.size || 'small').toLowerCase(),
           violet: Boolean(d.violet)
         };
-        setHistory(prev => [row, ...prev].slice(0, 100));
+         allHistoryRef.current[m] = [row, ...(allHistoryRef.current[m] || [])].slice(0, 10);
+         if (gameModeRef.current === m) setHistory(allHistoryRef.current[m]);
         socket.emit('client:fetch_my_bets');
 
         const bets = myRoundBetsRef.current;
@@ -312,7 +318,16 @@ export default function Dashboard() {
       {/* Game Tabs */}
       <div style={S.tabs}>
         {([['30s','30sec'],['1min','1 Min'],['3min','3 Min'],['5min','5 Min']] as const).map(([key, label]) => (
-          <div key={key} style={S.tab(gameMode === key)} onClick={() => { setGameMode(key); gameModeRef.current = key; }}>⏱<br />{label}</div>
+           <div key={key} style={S.tab(gameMode === key)} onClick={() => {
+             setGameMode(key); gameModeRef.current = key;
+             if (allTicksRef.current[key]) setTick(allTicksRef.current[key]);
+             if (allHistoryRef.current[key]) setHistory(allHistoryRef.current[key]);
+             const t = allTicksRef.current[key];
+             if (t) {
+               if (t.status === 'locked') { setLocked(true); lockedRef.current = true; setCountdown(t.remainingSeconds); }
+               else { setLocked(false); lockedRef.current = false; }
+             }
+           }}>⏱<br />{label}</div>
         ))}
       </div>
 
@@ -470,7 +485,7 @@ export default function Dashboard() {
             <div style={S.hHeader}>
               <span style={{ textAlign: 'left' }}>Period</span><span>Number</span><span>Size</span><span>Color</span>
             </div>
-            {history.length > 0 ? history.slice(0, 30).map((h, i) => (
+             {history.length > 0 ? history.slice(0, 10).map((h, i) => (
               <div key={i} style={S.hRow}>
                 <span style={{ textAlign: 'left', color: '#555' }}>{(h.period || '').slice(-4)}</span>
                 <span style={{ fontWeight: 900, color: BALL_COLORS[h.color] || '#333' }}>{h.number}</span>

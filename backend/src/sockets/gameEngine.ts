@@ -62,8 +62,11 @@ const getPayoutMultiplier = (betType: string): number => {
   }
 };
 
-const calculateHouseEdgeNumber = (bets: BetRecord[]): number => {
-  if (bets.length === 0) return Math.floor(Math.random() * 10);
+const MODE_OFFSETS: Record<string, number> = { '30s': 0, '1min': 3, '3min': 7, '5min': 5 };
+
+const calculateHouseEdgeNumber = (bets: BetRecord[], modeKey: string = '30s'): number => {
+  const offset = MODE_OFFSETS[modeKey] || 0;
+  if (bets.length === 0) return (Math.floor(Math.random() * 10) + offset) % 10;
   let bestNumber = 0;
   let maxProfit = -Infinity;
   for (let candidate = 0; candidate <= 9; candidate++) {
@@ -81,8 +84,10 @@ const calculateHouseEdgeNumber = (bets: BetRecord[]): number => {
   return bestNumber;
 };
 
-/* ── Period calculation per mode ─── */
-const getPeriodInfo = (duration: number) => {
+/* ── Period calculation per mode (with mode prefix) ─── */
+const MODE_PREFIX: Record<string, string> = { '30s': '3', '1min': '1', '3min': 'M', '5min': 'F' };
+
+const getPeriodInfo = (duration: number, modeKey: string = '30s') => {
   const now = new Date();
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const secSinceMidnight = Math.floor((now.getTime() - startOfDay.getTime()) / 1000);
@@ -90,8 +95,9 @@ const getPeriodInfo = (duration: number) => {
   const yyyy = now.getFullYear();
   const mm = String(now.getMonth() + 1).padStart(2, '0');
   const dd = String(now.getDate()).padStart(2, '0');
-  const intervalStr = String(intervalNum).padStart(5, '0');
-  const periodId = `${yyyy}${mm}${dd}${intervalStr}`;
+  const prefix = MODE_PREFIX[modeKey] || '';
+  const intervalStr = String(intervalNum).padStart(4, '0');
+  const periodId = `${prefix}${yyyy}${mm}${dd}${intervalStr}`;
   const elapsed = secSinceMidnight % duration;
   const remainingSeconds = duration - elapsed;
   return { periodId, remainingSeconds };
@@ -102,7 +108,7 @@ const fetchHistory = async (modeKey: string, ms: ModeState) => {
   if (ms.cachedHistory && (Date.now() - ms.lastHistoryFetch < 300000)) return ms.cachedHistory;
   try {
     const snap = await db.collection(`rounds_${modeKey}`)
-      .orderBy('round_id', 'desc').limit(50).get();
+      .orderBy('round_id', 'desc').limit(10).get();
     if (snap.empty) return [];
     const recent = snap.docs.map(d => {
       const data = d.data();
@@ -153,7 +159,7 @@ export const initGameEngine = (io: Server) => {
 
   // Initialize per-mode state
   for (const mode of GAME_MODES) {
-    const { periodId, remainingSeconds } = getPeriodInfo(mode.duration);
+    const { periodId, remainingSeconds } = getPeriodInfo(mode.duration, mode.key);
     modeStates[mode.key] = {
       roundId: periodId,
       gameState: { remainingSeconds, status: remainingSeconds <= mode.lockDuration ? 'locked' : 'betting' },
@@ -255,11 +261,11 @@ export const initGameEngine = (io: Server) => {
       const ms = modeStates[mode.key];
       try {
         if (ms.processing) return;
-        const { periodId, remainingSeconds } = getPeriodInfo(mode.duration);
+        const { periodId, remainingSeconds } = getPeriodInfo(mode.duration, mode.key);
 
         if (periodId !== ms.roundId) {
           ms.processing = true;
-          const winNum = calculateHouseEdgeNumber(ms.bets);
+          const winNum = calculateHouseEdgeNumber(ms.bets, mode.key);
           const winColor = getNumberColor(winNum);
           const winSize = winNum >= 5 ? 'big' : 'small';
           const winViolet = isViolet(winNum);
@@ -276,7 +282,7 @@ export const initGameEngine = (io: Server) => {
             });
 
             const entry = { period: ms.roundId, number: winNum, color: winColor, size: winSize, violet: winViolet };
-            ms.cachedHistory = ms.cachedHistory ? [entry, ...ms.cachedHistory].slice(0, 50) : [entry];
+            ms.cachedHistory = ms.cachedHistory ? [entry, ...ms.cachedHistory].slice(0, 10) : [entry];
             ms.lastHistoryFetch = Date.now();
 
             await calculatePayouts(mode.key, ms.roundId, winNum);
